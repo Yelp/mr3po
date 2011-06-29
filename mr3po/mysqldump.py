@@ -20,7 +20,8 @@ import re
 _INSERT_RE = re.compile(r'(`(?P<identifier>.*?)`|'
                        r'(?P<null>NULL)|'
                        r"'(?P<string>(?:\\.|''|[^'])*?)'|"
-                       r'(?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?))')
+                       r'(?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?)|'
+                       r'(?P<close_paren>\)))')
 
 _STRING_ESCAPE_RE = re.compile(r'\\(.)')
 
@@ -73,28 +74,49 @@ def parse_insert_many(sql, encoding=None):
         return None, []
 
     identifiers = []
-    values = []
+    rows = []
+    current_row = []
     for m in _INSERT_RE.finditer(sql):
         if m.group('identifier'):
             identifiers.append(m.group('identifier'))
         elif m.group('null'):
-            values.append(None)
+            current_row.append(None)
         elif m.group('string'):
-            values.append(unescape_string(m.group('string')))
+            current_row.append(unescape_string(m.group('string')))
         elif m.group('number'):
-            values.append(parse_number(m.group('number')))
+            current_row.append(parse_number(m.group('number')))
+        elif m.group('close_paren'):
+            # woot, I'm a parser
+            if current_row:
+                rows.append(current_row)
+                current_row = []
         else:
             assert False, 'should not be reached!'
 
+    if current_row:
+        raise ValueError('bad INSERT, missing close paren')
+
+    if not rows:
+        raise ValueError('bad INSERT, no values')
+
+    row_len = len(rows[0])
+    for i, row in enumerate(rows[1:]):
+        if len(row) != row_len:
+            raise ValueError('bad INSERT, row 0 has %d values, but row %d has %d values' % (row_len, i+1, len(row)))
+
+    if not identifiers:
+        raise ValueError('bad INSERT, no identifiers')
+
     table, cols = identifiers[0], identifiers[1:]
 
-    if not cols or not values or len(values) % len(cols) != 0:
-        raise ValueError('bad INSERT, got %d cols and %d values: %r' % (
-            len(cols), len(values), sql))
+    # no column names, return rows as lists
+    if not cols:
+        return table, rows
 
-    # segment values, and turn them into row dictionaries
-    return table, [dict(zip(cols, values[i:i+len(cols)]))
-                   for i in xrange(0, len(values), len(cols))]
+    if not len(cols) == row_len:
+         raise ValueError('bad INSERT, %d column names but rows have %d values' % (len(cols), row_len))
+
+    return table, [dict(zip(cols, row)) for row in rows]
 
 
 def _decode(s, encoding=None):
