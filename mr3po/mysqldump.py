@@ -11,25 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Parse INSERT statements from the output of mysqldump"""
+"""Parse INSERT statements from the output of mysqldump.
+
+This is a very very basic parser; it doesn't handle insert statements or SQL
+in general; just the output of mysqldump.
+"""
 import re
+
+__all__ = ['parse_insert', 'parse_insert_many']
 
 # Used http://dev.mysql.com/doc/refman/5.5/en/language-structure.html
 # as my guide for parsing INSERT statements
 
-_INSERT_RE = re.compile(r'(`(?P<identifier>.*?)`|'
+INSERT_RE = re.compile(r'(`(?P<identifier>.*?)`|'
                        r'(?P<null>NULL)|'
                        r"'(?P<string>(?:\\.|''|[^'])*?)'|"
                        r'(?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?)|'
                        r'(?P<close_paren>\)))')
 
-_STRING_ESCAPE_RE = re.compile(r'\\(.)')
+STRING_ESCAPE_RE = re.compile(r'\\(.)')
 
 # from http://dev.mysql.com/doc/refman/5.5/en/string-syntax.html
 #
 # MySQL string escape are almost the same as in Python, but there is
 # no \f, and there's \Z for Windows EOF
-_MYSQL_STRING_ESCAPES = {
+MYSQL_STRING_ESCAPES = {
     'r': '\r',
     'n': '\n',
     'b': '\b',
@@ -37,22 +43,6 @@ _MYSQL_STRING_ESCAPES = {
     '0': '\0',
     'Z': '\x1a',
 }
-
-
-def _string_escape_replacer(match):
-    c = match.group(1)
-    return _MYSQL_STRING_ESCAPES.get(c, c)
-
-
-def unescape_string(s):
-    return _STRING_ESCAPE_RE.sub(_string_escape_replacer, s)
-
-
-def parse_number(x):
-    try:
-        return int(x)
-    except ValueError:
-        return float(x)
 
 
 def parse_insert(sql, encoding=None):
@@ -68,7 +58,7 @@ def parse_insert(sql, encoding=None):
 
 
 def parse_insert_many(sql, encoding=None):
-    sql = _decode(sql, encoding)
+    sql = decode(sql, encoding)
 
     if not sql.startswith('INSERT'):
         return None, []
@@ -76,7 +66,7 @@ def parse_insert_many(sql, encoding=None):
     identifiers = []
     rows = []
     current_row = []
-    for m in _INSERT_RE.finditer(sql):
+    for m in INSERT_RE.finditer(sql):
         if m.group('identifier'):
             identifiers.append(m.group('identifier'))
         elif m.group('null'):
@@ -119,7 +109,25 @@ def parse_insert_many(sql, encoding=None):
     return table, [dict(zip(cols, row)) for row in rows]
 
 
-def _decode(s, encoding=None):
+def string_escape_replacer(match):
+    c = match.group(1)
+    return MYSQL_STRING_ESCAPES.get(c, c)
+
+
+def unescape_string(s):
+    return STRING_ESCAPE_RE.sub(string_escape_replacer, s)
+
+
+def parse_number(x):
+    try:
+        return int(x)
+    except ValueError:
+        return float(x)
+
+
+
+
+def decode(s, encoding=None):
     """Decode *s* into a unicode string, if it isn't alreaady.
 
     If *encoding* is ``None`` (the default), assume *s* is in UTF-8,
