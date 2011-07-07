@@ -18,6 +18,9 @@ in general; just the output of mysqldump.
 """
 import re
 
+
+
+
 __all__ = ['parse_insert', 'parse_insert_many']
 
 # Used http://dev.mysql.com/doc/refman/5.5/en/language-structure.html
@@ -26,6 +29,7 @@ __all__ = ['parse_insert', 'parse_insert_many']
 INSERT_RE = re.compile(r'(`(?P<identifier>.*?)`|'
                        r'(?P<null>NULL)|'
                        r"'(?P<string>(?:\\.|''|[^'])*?)'|"
+                       r'0x(?P<hex>[0-9a0-f]+)|'
                        r'(?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?)|'
                        r'(?P<close_paren>\)))')
 
@@ -73,6 +77,8 @@ def parse_insert_many(sql, encoding=None):
             current_row.append(None)
         elif m.group('string'):
             current_row.append(unescape_string(m.group('string')))
+        elif m.group('hex'):
+            current_row.append(m.group('hex').decode('hex'))
         elif m.group('number'):
             current_row.append(parse_number(m.group('number')))
         elif m.group('close_paren'):
