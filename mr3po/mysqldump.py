@@ -52,9 +52,6 @@ MYSQL_STRING_ESCAPES = {
 def parse_insert(sql, encoding=None):
     table, rows = parse_insert_many(sql)
 
-    if table is None: # i.e. not an INSERT statement
-        return None, None
-
     if len(rows) != 1:
         raise ValueError('bad INSERT, expected 1 row but got %d' % len(rows))
 
@@ -63,9 +60,6 @@ def parse_insert(sql, encoding=None):
 
 def parse_insert_many(sql, encoding=None):
     sql = decode(sql, encoding)
-
-    if not sql.startswith('INSERT'):
-        return None, []
 
     identifiers = []
     rows = []
@@ -129,8 +123,6 @@ def parse_number(x):
         return int(x)
     except ValueError:
         return float(x)
-
-
 
 
 def decode(s, encoding=None):
