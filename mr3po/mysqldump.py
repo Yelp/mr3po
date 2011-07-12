@@ -69,7 +69,7 @@ def parse_insert_many(sql, encoding=None):
             identifiers.append(m.group('identifier'))
         elif m.group('null'):
             current_row.append(None)
-        elif m.group('string'):
+        elif m.group('string') is not None:
             current_row.append(unescape_string(m.group('string')))
         elif m.group('hex'):
             current_row.append(m.group('hex').decode('hex'))
