@@ -19,9 +19,12 @@ in general; just the output of mysqldump.
 import re
 
 
-
-
-__all__ = ['parse_insert', 'parse_insert_many']
+__all__ = [
+    'MySQLInsertProtocol',
+    'MySQLInsertManyProtocol',
+    'parse_insert',
+    'parse_insert_many',
+]
 
 # Used http://dev.mysql.com/doc/refman/5.5/en/language-structure.html
 # as my guide for parsing INSERT statements
@@ -49,6 +52,24 @@ MYSQL_STRING_ESCAPES = {
 }
 
 
+class MySQLInsertProtocol(object):
+
+    def read(self, line):
+        return parse_insert(line)
+
+    def write(self, key, value):
+        raise NotImplementedError
+
+
+class MySQLInsertManyProtocol(object):
+
+    def read(self, line):
+        return parse_insert_many(line)
+
+    def write(self, key, value):
+        raise NotImplementedError
+
+
 def parse_insert(sql, encoding=None):
     table, rows = parse_insert_many(sql)
 
@@ -61,6 +82,9 @@ def parse_insert(sql, encoding=None):
 def parse_insert_many(sql, encoding=None):
     sql = decode(sql, encoding)
 
+    if not sql.startswith('INSERT'):
+        raise ValueError('not an INSERT statement')
+
     identifiers = []
     rows = []
     current_row = []
@@ -69,7 +93,7 @@ def parse_insert_many(sql, encoding=None):
             identifiers.append(m.group('identifier'))
         elif m.group('null'):
             current_row.append(None)
-        elif m.group('string') is not None:
+        elif m.group('string') is not None:  # parse empty strings!
             current_row.append(unescape_string(m.group('string')))
         elif m.group('hex'):
             current_row.append(m.group('hex').decode('hex'))
@@ -92,7 +116,9 @@ def parse_insert_many(sql, encoding=None):
     row_len = len(rows[0])
     for i, row in enumerate(rows[1:]):
         if len(row) != row_len:
-            raise ValueError('bad INSERT, row 0 has %d values, but row %d has %d values' % (row_len, i+1, len(row)))
+            raise ValueError(
+                'bad INSERT, row 0 has %d values, but row %d has %d values' %
+                (row_len, i + 1, len(row)))
 
     if not identifiers:
         raise ValueError('bad INSERT, no identifiers')
@@ -104,7 +130,9 @@ def parse_insert_many(sql, encoding=None):
         return table, rows
 
     if not len(cols) == row_len:
-         raise ValueError('bad INSERT, %d column names but rows have %d values' % (len(cols), row_len))
+        raise ValueError(
+            'bad INSERT, %d column names but rows have %d values' %
+            (len(cols), row_len))
 
     return table, [dict(zip(cols, row)) for row in rows]
 
