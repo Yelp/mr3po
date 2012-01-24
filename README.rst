@@ -8,7 +8,6 @@ mr3po
 **mr3po** is about the easiest Open Source project to contribute to. Just submit a class that can read and write an existing line-based format, and you've made a useful contribution.
 
 Some guidelines for contributions:
-
 * put the code for your format in `mrjob/<format name>.py`
 * include tests, in `tests/test_<format name>.py`.
 * the name of your protocol class(es) should end in `Protocol`
