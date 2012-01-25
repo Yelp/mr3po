@@ -1,5 +1,23 @@
 try:
     from setuptools import setup
+    # arguments that distutils doesn't understand
+    setuptools_kwargs = {
+        'extras_require': {
+            # add dependecies for mr3po modules here
+            #
+            #'quipu': ['python-inca', 'knottedcord>=0.3']
+        },
+        'install_requires': [
+            # todo: update this to whatever version of boto includes
+            # https://github.com/boto/boto/pull/190
+            'boto>=2.0b4',
+            'PyYAML',
+            'simplejson>=2.0.9',
+        ],
+        'provides': ['mr3po'],
+        'test_suite': 'tests.suite.load_tests',
+        'tests_require': ['unittest2'],
+    }
 except ImportError:
     from distutils.core import setup
 
@@ -21,16 +39,11 @@ setup(
         'Topic :: Database',
     ],
     description=mr3po.__doc__,
-    extras_require={
-        # add dependecies for mr3po modules here
-        #
-        #'quipu': ['python-inca', 'knottedcord>=0.3']
-    },
     license='Apache',
     long_description=open('README.rst').read(),
     name='mr3po',
     packages=['mr3po'],
-    provides=['mr3po'],
     url='http://github.com/Yelp/mr3po',
     version=mr3po.__version__,
+    **setuptools_kwargs
 )

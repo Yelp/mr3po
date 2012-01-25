@@ -11,19 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Parse INSERT statements from the output of mysqldump.
+"""Parse MySQL INSERT statements from the output of mysqldump.
 
-This is a very very basic parser; it doesn't handle insert statements or SQL
-in general; just the output of mysqldump.
+We recommend using :py:class:`MySQLCompleteInsertProtocol`, which parses
+one-row ```INSERT`` statements that include column names (this is the format
+created when using :command:s3mysqldump with the :option:`--single-row`
+option). There are also protocols to handle rows without column names and
+multi-row ``INSERT`` statements.
 """
+from decimal import Decimal
 import re
 
 
 __all__ = [
+    'MySQLCompleteExtendedInsertProtocol',
+    'MySQLCompleteInsertProtocol',
+    'MySQLExtendedInsertProtocol',
     'MySQLInsertProtocol',
-    'MySQLInsertManyProtocol',
-    'parse_insert',
-    'parse_insert_many',
 ]
 
 # Used http://dev.mysql.com/doc/refman/5.5/en/language-structure.html
@@ -51,35 +55,54 @@ MYSQL_STRING_ESCAPES = {
     'Z': '\x1a',
 }
 
+class AbstractMySQLInsertProtocol(object):
 
-class MySQLInsertProtocol(object):
+    def __init__(self, decimal=False, encoding=None, output_tab=False):
+        self.decimal = decimal
+        self.encoding = encoding
+        self.output_tab = output_tab
+
+    @property
+    def complete(self):
+        raise NotImplementedError
+
+    @property
+    def single_row(self):
+        raise NotImplementedError
 
     def read(self, line):
-        return parse_insert(line)
+        return parse_insert(
+            line,
+            complete=self.complete,
+            encoding=self.encoding,
+            single_row=self.single_row)
 
     def write(self, key, value):
         raise NotImplementedError
 
 
-class MySQLInsertManyProtocol(object):
-
-    def read(self, line):
-        return parse_insert_many(line)
-
-    def write(self, key, value):
-        raise NotImplementedError
+class MySQLCompleteInsertProtocol(AbstractMySQLInsertProtocol):
+    complete = True
+    single_row = True
 
 
-def parse_insert(sql, encoding=None):
-    table, rows = parse_insert_many(sql)
-
-    if len(rows) != 1:
-        raise ValueError('bad INSERT, expected 1 row but got %d' % len(rows))
-
-    return table, rows[0]
+class MySQLCompleteExtendedInsertProtocol(AbstractMySQLInsertProtocol):
+    complete = True
+    single_row = False
 
 
-def parse_insert_many(sql, encoding=None):
+class MySQLInsertProtocol(AbstractMySQLInsertProtocol):
+    complete = False
+    single_row = True
+
+
+class MySQLExtendedInsertProtocol(AbstractMySQLInsertProtocol):
+    complete = False
+    single_row = False
+
+
+def parse_insert(sql, complete=False, encoding=None, single_row=None):
+
     sql = decode(sql, encoding)
 
     if not sql.startswith('INSERT'):
@@ -124,17 +147,28 @@ def parse_insert_many(sql, encoding=None):
         raise ValueError('bad INSERT, no identifiers')
 
     table, cols = identifiers[0], identifiers[1:]
-
-    # no column names, return rows as lists
-    if not cols:
-        return table, rows
-
-    if not len(cols) == row_len:
+    
+    if cols and len(cols) != row_len:
         raise ValueError(
             'bad INSERT, %d column names but rows have %d values' %
             (len(cols), row_len))
 
-    return table, [dict(zip(cols, row)) for row in rows]
+    if complete:
+        if cols:
+            results = [dict(zip(cols, row)) for row in rows]
+        else:
+            raise ValueError('incomplete INSERT, no column names')
+    else:
+        results = rows
+
+    if single_row:
+        if len(results) == 1:
+            return table, results[0]
+        else:
+            raise ValueError(
+                'bad INSERT, expected 1 row but got %d' % len(results))
+    else:
+        return table, results
 
 
 def string_escape_replacer(match):
@@ -146,11 +180,14 @@ def unescape_string(s):
     return STRING_ESCAPE_RE.sub(string_escape_replacer, s)
 
 
-def parse_number(x):
+def parse_number(x, decimal=False):
     try:
         return int(x)
     except ValueError:
-        return float(x)
+        if decimal:
+            return Decimal(x)
+        else:
+            return float(x)
 
 
 def decode(s, encoding=None):
