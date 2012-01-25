@@ -24,7 +24,7 @@ import re
 
 
 __all__ = [
-    'MySQLCompleteExtendedInsertProtocol',
+    'MySQLExtendedCompleteInsertProtocol',
     'MySQLCompleteInsertProtocol',
     'MySQLExtendedInsertProtocol',
     'MySQLInsertProtocol',
@@ -74,6 +74,7 @@ class AbstractMySQLInsertProtocol(object):
         return parse_insert(
             line,
             complete=self.complete,
+            decimal=self.decimal,
             encoding=self.encoding,
             single_row=self.single_row)
 
@@ -86,7 +87,7 @@ class MySQLCompleteInsertProtocol(AbstractMySQLInsertProtocol):
     single_row = True
 
 
-class MySQLCompleteExtendedInsertProtocol(AbstractMySQLInsertProtocol):
+class MySQLExtendedCompleteInsertProtocol(AbstractMySQLInsertProtocol):
     complete = True
     single_row = False
 
@@ -101,7 +102,8 @@ class MySQLExtendedInsertProtocol(AbstractMySQLInsertProtocol):
     single_row = False
 
 
-def parse_insert(sql, complete=False, encoding=None, single_row=None):
+def parse_insert(
+    sql, complete=False, decimal=False, encoding=None, single_row=None):
 
     sql = decode(sql, encoding)
 
@@ -121,7 +123,8 @@ def parse_insert(sql, complete=False, encoding=None, single_row=None):
         elif m.group('hex'):
             current_row.append(m.group('hex').decode('hex'))
         elif m.group('number'):
-            current_row.append(parse_number(m.group('number')))
+            current_row.append(
+                parse_number(m.group('number'), decimal=decimal))
         elif m.group('close_paren'):
             # woot, I'm a parser
             if current_row:
