@@ -1,23 +1,16 @@
 try:
     from setuptools import setup
     # arguments that distutils doesn't understand
-    setuptools_kwargs = {
-        'extras_require': {
+    setuptools_kwargs = dict(
+        extras_require={
             # add dependecies for mr3po modules here
             #
             #'quipu': ['python-inca', 'knottedcord>=0.3']
         },
-        'install_requires': [
-            # todo: update this to whatever version of boto includes
-            # https://github.com/boto/boto/pull/190
-            'boto>=2.0b4',
-            'PyYAML',
-            'simplejson>=2.0.9',
-        ],
-        'provides': ['mr3po'],
-        'test_suite': 'tests.suite.load_tests',
-        'tests_require': ['unittest2'],
-    }
+        provides=['mr3po'],
+        test_suite='tests.suite.load_tests',
+        tests_require=['unittest2'],
+    )
 except ImportError:
     from distutils.core import setup
 
