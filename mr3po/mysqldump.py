@@ -1,4 +1,4 @@
-# Copyright 2011 Yelp
+# Copyright 2011-2012 Yelp
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ multi-row ``INSERT`` statements.
 from decimal import Decimal
 import re
 
+from mr3po.common import decode_string
 
 __all__ = [
     'MySQLExtendedCompleteInsertProtocol',
@@ -55,6 +56,10 @@ MYSQL_STRING_ESCAPES = {
     'Z': '\x1a',
 }
 
+MYSQL_STRING_ESCAPES_FOR_TRANSLATE = dict(
+    (ord(c), u'\\%s' % esc) for esc, c in MYSQL_STRING_ESCAPES.iteritems())
+
+
 class AbstractMySQLInsertProtocol(object):
 
     def __init__(self, decimal=False, encoding=None, output_tab=False):
@@ -79,7 +84,17 @@ class AbstractMySQLInsertProtocol(object):
             single_row=self.single_row)
 
     def write(self, key, value):
-        raise NotImplementedError
+        return dump_as_insert(
+            key, value,
+            complete=self.complete,
+            encoding=self.encoding,
+            output_tab=self.output_tab,
+            single_row=self.single_row)
+
+    def __repr__(self):
+        return '%s(decimal=%r, encoding=%r, output_tab=%r)' % (
+            self.__class__.__name__,
+            self.decimal, self.encoding, self.output_tab)
 
 
 class MySQLCompleteInsertProtocol(AbstractMySQLInsertProtocol):
@@ -102,10 +117,10 @@ class MySQLExtendedInsertProtocol(AbstractMySQLInsertProtocol):
     single_row = False
 
 
-def parse_insert(
-    sql, complete=False, decimal=False, encoding=None, single_row=None):
+def parse_insert(sql, complete=False, decimal=False, encoding=None,
+                 single_row=False):
 
-    sql = decode(sql, encoding)
+    sql = decode_string(sql, encoding)
 
     if not sql.startswith('INSERT'):
         raise ValueError('not an INSERT statement')
@@ -174,6 +189,77 @@ def parse_insert(
         return table, results
 
 
+def dump_as_insert(table, data, complete=False, encoding=None,
+                   output_tab=False, single_row=False):
+    if not table or not isinstance(table, basestring):
+        raise ValueError('Bad table name')
+    
+    if not data:
+        raise ValueError('No data to insert')
+
+    if single_row:
+        data = [data]
+
+    cols = None
+
+    if complete:
+        rows = []
+        for row_num, row_data in enumerate(data):
+            row_cols, row = zip(*sorted(row_data.iteritems()))
+            if cols is None:
+                cols = row_cols
+            elif cols != row_cols:
+                raise ValueError(
+                    'row 0 has columns %r, but row %d has columns %r'
+                    % (cols, row_num, row_cols))
+
+            rows.append(row)
+    else:
+        num_cols = len(data[0])
+        for i, row_data in enumerate(data[1:]):
+            if len(row_data) != num_cols:
+                raise ValueError(
+                    'row 0 has %d items, but row %d has %d items' %
+                    (num_cols, i + 1, len(row_data)))
+
+        rows = data
+
+    sql = 'INSERT INTO %s%s%s VALUES %s;' % (
+        format_identifier(table),
+        '\t' if output_tab else '',
+        (' ' + format_cols(cols)) if cols else '',
+        ', '.join(format_row(row) for row in rows))
+
+    return sql.encode(encoding or 'utf8')
+
+
+def format_identifier(identifier):
+    # TODO: add encoding, escaping
+    return '`%s`' % identifier
+
+
+def format_cols(cols):
+    return '(%s)' % ','.join(format_identifier(col) for col in cols)
+
+
+def format_row(items):
+    return '(%s)' % ','.join(format_value(x) for x in items)
+
+
+def format_value(x):
+    if x is None:
+        return 'NULL'
+    elif isinstance(x, (int, long, float, Decimal)):
+        return str(x)
+    elif isinstance(x, unicode):
+        return "'%s'" % escape_unicode_string(x)
+    elif isinstance(x, str):
+        return '0x%s' % x.encode('hex').upper()
+    else:
+        raise TypeError("can't encode values of type %s" %
+                        x.__class__.__name__)
+
+
 def string_escape_replacer(match):
     c = match.group(1)
     return MYSQL_STRING_ESCAPES.get(c, c)
@@ -181,6 +267,13 @@ def string_escape_replacer(match):
 
 def unescape_string(s):
     return STRING_ESCAPE_RE.sub(string_escape_replacer, s)
+
+
+def escape_unicode_string(u):
+    if not isinstance(u, unicode):
+        raise TypeError
+    # TODO: translate() was pretty slow last I checked; maybe try regex?
+    return u.translate(MYSQL_STRING_ESCAPES_FOR_TRANSLATE)
 
 
 def parse_number(x, decimal=False):
@@ -191,22 +284,3 @@ def parse_number(x, decimal=False):
             return Decimal(x)
         else:
             return float(x)
-
-
-def decode(s, encoding=None):
-    """Decode *s* into a unicode string, if it isn't alreaady.
-
-    If *encoding* is ``None`` (the default), assume *s* is in UTF-8,
-    and if it's not, fall back to latin-1.
-    """
-    if isinstance(s, unicode):
-        return s
-
-    if not encoding:
-        try:
-            return s.decode('utf8')
-        except:
-            # this should always work
-            return s.decode('latin1')
-    else:
-        return s.decode(encoding)

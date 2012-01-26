@@ -1,4 +1,18 @@
 # -*- coding: utf-8 -*-
+# Copyright 2012 Yelp
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from decimal import Decimal
 
 try:
@@ -11,6 +25,7 @@ from mr3po.mysqldump import MySQLCompleteInsertProtocol
 from mr3po.mysqldump import MySQLExtendedInsertProtocol
 from mr3po.mysqldump import MySQLInsertProtocol
 
+from tests.roundtrip import RoundTripTestCase
 
 
 class GoodInputTestCase(unittest.TestCase):
@@ -145,15 +160,126 @@ class NumberTestCase(unittest.TestCase):
 
     def test_int_vs_float(self):
         p = MySQLInsertProtocol()
-        key, value = p.read("INSERT INTO `scores` (1, 1.0, 1.25)")
-        self.assertEqual(key, 'scores')
+        key, value = p.read("INSERT INTO `score` (1, 1.0, 1.25)")
+        self.assertEqual(key, 'score')
         self.assertEqual(value, [1, 1.0, 1.25])
         self.assertEqual([type(x) for x in value], [int, float, float])
         
     def test_decimal(self):
         p = MySQLInsertProtocol(decimal=True)
-        key, value = p.read("INSERT INTO `scores` (1, 1.0, 1.25)")
-        self.assertEqual(key, 'scores')
+        key, value = p.read("INSERT INTO `score` (1, 1.0, 1.25)")
+        self.assertEqual(key, 'score')
         self.assertEqual(value, [1, Decimal('1.0'), Decimal('1.25')])
         self.assertEqual([type(x) for x in value], [int, Decimal, Decimal])
+
+
+class OutputTabTestCase(unittest.TestCase):
+
+    def test_tabs(self):
+        p = MySQLInsertProtocol(output_tab=True)
+
+        row1 = p.write('score', [1, 1.0, 1.25])
+        row2 = p.write('score', [0, None, None])
+        row3 = p.write('user', [2, u'Nully Nullington', None, None, None])
+
+        self.assertEqual(row1.split('\t')[0], row2.split('\t')[0])
+        self.assertNotEqual(row1.split('\t')[0], row3.split('\t')[0])
+
+    def test_no_tabs(self):
+        p = MySQLInsertProtocol()
+
+        row1 = p.write('score', [1, 1.0, 1.25])
+        row2 = p.write('score', [0, None, None])
         
+        self.assertNotEqual(row1.split('\t')[0], row2.split('\t')[0])
+    
+
+class MySQLInsertProtocolTestCase(RoundTripTestCase):
+    PROTOCOLS = [
+        MySQLInsertProtocol(),
+        MySQLInsertProtocol(output_tab=True),
+        MySQLInsertProtocol(encoding='utf16'),
+    ]
+
+    ROUND_TRIP_KEY_VALUES = [
+        ('user', [1, u'David Marin', 25.25, '\xc0\xde', None]),
+        ('user', [2, u'Nully Nullington', None, None, None]),
+        ('user', [3, u'Paul Erdős', 0, '\x0e\x2d\x05', None]),
+    ]
+
+
+class MySQLInsertProtocolDecimalTestCase(RoundTripTestCase):
+    PROTOCOLS = [
+        MySQLInsertProtocol(decimal=True),
+    ]
+
+    ROUND_TRIP_KEY_VALUES = [
+        ('user', [4, u'Ezra', Decimal('2010.66'), None, None]),
+    ]
+
+
+class MySQLCompleteInsertProtocolRoundTripTestCase(RoundTripTestCase):
+    PROTOCOLS = [
+        MySQLCompleteInsertProtocol(),
+        MySQLCompleteInsertProtocol(output_tab=True),
+        MySQLCompleteInsertProtocol(encoding='utf16'),
+    ]
+
+    ROUND_TRIP_KEY_VALUES = [
+        ('user', {'id': 1,
+                  'name': u'David Marin',
+                  'score': 25.25,
+                  'data': '\xc0\xde',
+                  'misc': None}),
+        ('user', {'id': 2,
+                  'name': u'Nully Nullington',
+                  'score': None,
+                  'data': None,
+                  'misc': None}),
+        ('user', {'id': 3,
+                  'name': u'Paul Erdős',
+                  'score': 0,
+                  'data': '\x0e\x2d\x05',
+                  'misc': None}),
+    ]
+
+
+class MySQLExtendedInsertProtocolTestCase(RoundTripTestCase):
+    PROTOCOLS = [
+        MySQLExtendedInsertProtocol(),
+        MySQLExtendedInsertProtocol(output_tab=True),
+        MySQLExtendedInsertProtocol(encoding='utf16'),
+    ]
+
+    ROUND_TRIP_KEY_VALUES = [
+        ('user', [[1, u'David Marin', 25.25, '\xc0\xde', None],
+                  [2, u'Nully Nullington', None, None, None],
+                  [3, u'Paul Erdős', 0, '\x0e\x2d\x05', None]]),
+    ]
+
+
+class MySQLExtendedCompleteInsertProtocolRoundTripTestCase(RoundTripTestCase):
+    PROTOCOLS = [
+        MySQLExtendedCompleteInsertProtocol(),
+        MySQLExtendedCompleteInsertProtocol(output_tab=True),
+        MySQLExtendedCompleteInsertProtocol(encoding='utf16'),
+    ]
+
+    ROUND_TRIP_KEY_VALUES = [
+        ('user', [{'id': 1,
+                   'name': u'David Marin',
+                   'score': 25.25,
+                   'data': '\xc0\xde',
+                   'misc': None},
+                  {'id': 2,
+                   'name': u'Nully Nullington',
+                   'score': None,
+                   'data': None,
+                   'misc': None},
+                  {'id': 3,
+                   'name': u'Paul Erdős',
+                   'score': 0,
+                   'data': '\x0e\x2d\x05',
+                   'misc': None},
+                  ]),
+    ]
