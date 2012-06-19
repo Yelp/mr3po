@@ -165,7 +165,7 @@ def parse_insert(sql, complete=False, decimal=False, encoding=None,
         raise ValueError('bad INSERT, no identifiers')
 
     table, cols = identifiers[0], identifiers[1:]
-    
+
     if cols and len(cols) != row_len:
         raise ValueError(
             'bad INSERT, %d column names but rows have %d values' %
@@ -193,7 +193,7 @@ def dump_as_insert(table, data, complete=False, encoding=None,
                    output_tab=False, single_row=False):
     if not table or not isinstance(table, basestring):
         raise ValueError('Bad table name')
-    
+
     if not data:
         raise ValueError('No data to insert')
 

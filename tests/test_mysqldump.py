@@ -17,6 +17,7 @@ from decimal import Decimal
 
 try:
     import unittest2 as unittest
+    unittest  # quiet "redefinition of unused ..." warning from pyflakes
 except ImportError:
     import unittest
 
@@ -61,7 +62,7 @@ class GoodInputTestCase(unittest.TestCase):
             (key, value),
             (u'user', [[1, u'David Marin', 25.25, '\xc0\xde', None],
                        [2, u'Nully Nullington', None, None, None]]))
-        
+
     def test_extended_complete_insert(self):
         p = MySQLExtendedCompleteInsertProtocol()
         key, value = p.read(
@@ -79,7 +80,7 @@ class GoodInputTestCase(unittest.TestCase):
                                       u'score': None,
                                       u'data': None,
                                       u'misc': None}]))
-    
+
 
 class BadInputTestCase(unittest.TestCase):
 
@@ -106,7 +107,7 @@ class BadInputTestCase(unittest.TestCase):
             p.read,
             "INSERT INTO `user` (`id`) VALUES"
             " (1,'David Marin',25.25,0xC0DE,NULL);")
-        
+
     def test_differing_row_sizes(self):
         p = MySQLExtendedInsertProtocol()
         self.assertRaises(
@@ -129,7 +130,7 @@ class EncodingTestCase(unittest.TestCase):
                                      u'name': u'Paul Erdős',
                                      u'score': 0,
                                      u'data': '\x0e\x2d\x05',
-                                     u'misc': None,}))
+                                     u'misc': None, }))
 
         key, value = p.read(
             # encoded in latin-1, with ö instead of ő
@@ -140,7 +141,7 @@ class EncodingTestCase(unittest.TestCase):
                                      u'name': u'Paul Erdös',
                                      u'score': 0,
                                      u'data': '\x0e\x2d\x05',
-                                     u'misc': None,}))
+                                     u'misc': None, }))
 
     def test_alternate_encoding(self):
         p = MySQLCompleteInsertProtocol(encoding='latin-1')
@@ -164,7 +165,7 @@ class NumberTestCase(unittest.TestCase):
         self.assertEqual(key, 'score')
         self.assertEqual(value, [1, 1.0, 1.25])
         self.assertEqual([type(x) for x in value], [int, float, float])
-        
+
     def test_decimal(self):
         p = MySQLInsertProtocol(decimal=True)
         key, value = p.read("INSERT INTO `score` (1, 1.0, 1.25)")
@@ -190,9 +191,9 @@ class OutputTabTestCase(unittest.TestCase):
 
         row1 = p.write('score', [1, 1.0, 1.25])
         row2 = p.write('score', [0, None, None])
-        
+
         self.assertNotEqual(row1.split('\t')[0], row2.split('\t')[0])
-    
+
 
 class MySQLInsertProtocolTestCase(RoundTripTestCase):
     PROTOCOLS = [

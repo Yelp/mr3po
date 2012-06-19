@@ -1,5 +1,6 @@
 try:
     from setuptools import setup
+    setup  # quiet "redefinition of unused ..." warning from pyflakes
     # arguments that distutils doesn't understand
     setuptools_kwargs = dict(
         extras_require={

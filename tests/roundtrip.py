@@ -28,6 +28,7 @@ from decimal import Decimal
 
 try:
     import unittest2 as unittest
+    unittest  # quiet "redefinition of unused ..." warning from pyflakes
 except ImportError:
     import unittest
 
@@ -80,13 +81,13 @@ class RoundTripTestCase(unittest.TestCase):
                     type(encoded), str,
                     '%r.write() should encode (%r, %r) as a bytestring,'
                     ' not %r' % (p, key, value, encoded))
-    
+
                 decoded = p.read(encoded)
                 self.assertEqual(
                     type(decoded), tuple,
                     '%r.read() should encode %r as a tuple, not %r' %
                     (p, encoded, decoded))
-                
+
                 self.assertEqual(
                     decoded, (key, value),
                     '%r failed to write then read (%r, %r)' %
@@ -106,12 +107,12 @@ class RoundTripTestCase(unittest.TestCase):
                 except:
                     # can't encode this value. That's fine.
                     return
-    
+
                 self.assertEqual(
                     type(encoded), str,
                     '%r.write() should encode (%r, %r) as a bytestring,'
                     ' not %r' % (p, key, value, encoded))
-    
+
                 decoded = p.read(encoded)
                 self.assertEqual(
                     type(encoded), tuple,
@@ -121,9 +122,9 @@ class RoundTripTestCase(unittest.TestCase):
                     len(decoded), 2,
                     '%r.read() should encode %r as a tuple with two items,'
                     ' not %r' % (p, encoded, decoded))
-                                 
+
                 reencoded = p.write(*decoded)
-    
+
                 self.assertEqual(
                     encoded, reencoded,
                     '%r re-encodes %r as %r' % (p, encoded, reencoded))
