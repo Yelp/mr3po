@@ -1,4 +1,4 @@
-# Copyright 2011 Yelp
+# Copyright 2011-2012 Yelp
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 __author__ = 'David Marin <dave@yelp.com>'
 
 __credits__ = [
+    # You?
 ]
 
-__version__ = '0.1.0-dev'
+__version__ = '0.1.0'
