@@ -10,7 +10,7 @@ mr3po
 Some guidelines for contributions:
 
 * put the code for your format in ``mrjob/<format name>.py``
-* include tests, in ``tests/test_<format name>.py``.
 * the name of your protocol class(es) should end in ``Protocol``
 * if your protocol class(es) only handle single values (rather than key-value pairs), their name should end in ``ValueProtocol``
+* include tests, in ``tests/test_<format name>.py``. At least one test should inherit from ``tests.roundtrip.RoundTripTestCase``.
 * external dependencies are fine, but should be optional; add them to ``extras_require`` in ``setup.py``.
