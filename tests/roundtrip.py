@@ -83,9 +83,9 @@ class RoundTripTestCase(unittest.TestCase):
                     ' not %r' % (p, key, value, encoded))
 
                 decoded = p.read(encoded)
-                self.assertEqual(
-                    type(decoded), tuple,
-                    '%r.read() should encode %r as a tuple, not %r' %
+                self.assertIsInstance(
+                    decoded, tuple,
+                    '%r.read() should decode %r as a tuple, not %r' %
                     (p, encoded, decoded))
 
                 self.assertEqual(
@@ -108,15 +108,15 @@ class RoundTripTestCase(unittest.TestCase):
                     # can't encode this value. That's fine.
                     return
 
-                self.assertEqual(
-                    type(encoded), str,
+                self.assertIsInstance(
+                    encoded, str,
                     '%r.write() should encode (%r, %r) as a bytestring,'
                     ' not %r' % (p, key, value, encoded))
 
                 decoded = p.read(encoded)
-                self.assertEqual(
-                    type(encoded), tuple,
-                    '%r.read() should encode %r as a tuple, not %r' %
+                self.assertIsInstance(
+                    decoded, tuple,
+                    '%r.read() should decode %r as a tuple, not %r' %
                     (p, encoded, decoded))
                 self.assertEqual(
                     len(decoded), 2,

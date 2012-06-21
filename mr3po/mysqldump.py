@@ -230,7 +230,7 @@ def dump_as_insert(table, data, complete=False, encoding=None,
         (' ' + format_cols(cols)) if cols else '',
         ', '.join(format_row(row) for row in rows))
 
-    return sql.encode(encoding or 'utf8')
+    return sql.encode(encoding or 'utf_8')
 
 
 def format_identifier(identifier):

@@ -24,9 +24,9 @@ def decode_string(s, encoding=None):
 
     if not encoding:
         try:
-            return s.decode('utf8')
+            return s.decode('utf_8')
         except:
             # this should always work
-            return s.decode('latin1')
+            return s.decode('latin_1')
     else:
         return s.decode(encoding)
