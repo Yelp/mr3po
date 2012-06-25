@@ -11,8 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Encode keys and values in single-line YAML. Which is a lot like JSON
-without so many quotes."""
+"""Represent data in single-line YAML.
+
+:py:class:`YAMLProtocol` can handle nearly any data type, and can serve as a
+more readable alternative to :py:class:`~mrjob.protocol.PickleProtocol`.
+As with pickle, you should be careful about reading untrusted data with this
+protocol, because it can execute arbitrary code; also, this format is
+Python-specific.
+
+:py:class:`SafeYAMLProtocol` supports basic YAML data types, which are
+a superset of JSON data types, and are supported across YAML implementations.
+
+We also provide :py:class:`YAMLValueProtocol` and :py:class:`SafeYAMLProtocol`
+to handle values without keys.
+"""
 from __future__ import absolute_import
 
 import yaml
@@ -20,7 +32,12 @@ import yaml
 from mr3po.common import decode_string
 
 
-__all__ = ['YAMLProtocol', 'YAMLValueProtocol']
+__all__ = [
+    'SafeYAMLProtocol',
+    'SafeYAMLValueProtocol',
+    'YAMLProtocol',
+    'YAMLValueProtocol',
+]
 
 
 def dump_inline(data, allow_unicode=None, encoding=None, safe=False):
@@ -40,15 +57,10 @@ def dump_inline(data, allow_unicode=None, encoding=None, safe=False):
     out = dump(
         data,
         allow_unicode=allow_unicode,
-        canonical=None,
         default_flow_style='block',
-        encoding=None,
         explicit_end=False,
         explicit_start=False,
-        indent=None,
         line_break='\n',
-        tags=None,
-        version=None,
         width=float('inf')).rstrip()
 
     if out.endswith(u'\n...'):
@@ -59,10 +71,18 @@ def dump_inline(data, allow_unicode=None, encoding=None, safe=False):
 
 class YAMLProtocolBase(object):
 
-    def __init__(self, allow_unicode=False, encoding=None, safe=False):
+    safe = True
+
+    def __init__(self, allow_unicode=False, encoding=None):
+        """Optional parameters:
+
+        :param allow_unicode: Allow non-ASCII characters in the output
+                              (e.g. accented characters).
+        :param encoding: Character encoding to use. We default to UTF-8,
+                         with fallback to latin-1 when decoding input.
+        """
         self.allow_unicode = allow_unicode
         self.encoding = encoding
-        self.safe = safe
 
     def load(self, data):
         unicode_data = decode_string(data, encoding=self.encoding)
@@ -80,19 +100,19 @@ class YAMLProtocolBase(object):
             safe=self.safe)
 
 
-class YAMLProtocol(YAMLProtocolBase):
+class SafeYAMLProtocol(YAMLProtocolBase):
+    """Encode/decode keys and values that can be represented using
+    YAML tags. This is a superset of JSON, and includes most basic data
+    structures; for a full list see
+    http://pyyaml.org/wiki/PyYAMLDocumentation#YAMLtagsandPythontypes.
 
-    def __init__(self, *args, **kwargs):
-        super(YAMLProtocol, self).__init__(*args, **kwargs)
-
-        # a tuple containing the last encoded key seen, and the decoded key
-        self._key_cache = (None, None)
-
+    Note that this will encode tuples as lists.
+    """
     def read(self, line):
         key_str, value_str = line.split('\t')
 
         # cache last key
-        if key_str != self._key_cache[0]:
+        if key_str != getattr(self, '_key_cache', [None])[0]:
             self._key_cache = (key_str, self.load(key_str))
 
         key = self._key_cache[1]
@@ -103,10 +123,28 @@ class YAMLProtocol(YAMLProtocolBase):
         return '%s\t%s' % (self.dump(key), self.dump(value))
 
 
-class YAMLValueProtocol(YAMLProtocolBase):
+class YAMLProtocol(SafeYAMLProtocol):
+    """Encode/decode keys and values of virtually any type using YAML.
+    """
+    safe = False
 
+
+class SafeYAMLValueProtocol(YAMLProtocolBase):
+    """Encode/decode keys and values that can be represented using
+    YAML tags. This is a superset of JSON, and includes most basic data
+    structures; for a full list see
+    http://pyyaml.org/wiki/PyYAMLDocumentation#YAMLtagsandPythontypes.
+
+    Note that this will encode tuples as lists.
+    """
     def read(self, line):
         return None, self.load(line)
 
     def write(self, _, value):
         return self.dump(value)
+
+
+class YAMLValueProtocol(SafeYAMLValueProtocol):
+    """Encode/decode values of virtually any type using YAML.
+    """
+    safe = False

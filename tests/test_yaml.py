@@ -22,6 +22,8 @@ except ImportError:
 from yaml.constructor import ConstructorError
 from yaml.representer import RepresenterError
 
+from mr3po.yaml import SafeYAMLProtocol
+from mr3po.yaml import SafeYAMLValueProtocol
 from mr3po.yaml import YAMLProtocol
 from mr3po.yaml import YAMLValueProtocol
 from tests.roundtrip import RoundTripTestCase
@@ -85,10 +87,10 @@ class YAMLValueProtocolRoundTripTestCase(RoundTripTestCase):
 
 class SafeYAMLProtocolRoundTripTestCase(RoundTripTestCase):
     PROTOCOLS = [
-        YAMLProtocol(safe=True),
-        YAMLProtocol(encoding='utf_7', safe=True),
-        YAMLProtocol(encoding='utf_8', safe=True),
-        YAMLProtocol(encoding='utf_16', safe=True),
+        SafeYAMLProtocol(),
+        SafeYAMLProtocol(encoding='utf_7'),
+        SafeYAMLProtocol(encoding='utf_8'),
+        SafeYAMLProtocol(encoding='utf_16'),
     ]
 
     WRW_KEY_VALUES = KEY_VALUES
@@ -97,10 +99,10 @@ class SafeYAMLProtocolRoundTripTestCase(RoundTripTestCase):
 
 class SafeYAMLValueProtocolRoundTripTestCase(RoundTripTestCase):
     PROTOCOLS = [
-        YAMLValueProtocol(safe=True),
-        YAMLValueProtocol(encoding='utf_7', safe=True),
-        YAMLValueProtocol(encoding='utf_8', safe=True),
-        YAMLValueProtocol(encoding='utf_16', safe=True),
+        SafeYAMLValueProtocol(),
+        SafeYAMLValueProtocol(encoding='utf_7'),
+        SafeYAMLValueProtocol(encoding='utf_8'),
+        SafeYAMLValueProtocol(encoding='utf_16'),
     ]
 
     WRW_KEY_VALUES = KEY_VALUES
@@ -110,20 +112,20 @@ class SafeYAMLValueProtocolRoundTripTestCase(RoundTripTestCase):
 class SafetyTestCase(unittest.TestCase):
 
     def test_protocol_wont_encode(self):
-        safe_p = YAMLProtocol(safe=True)
+        safe_p = SafeYAMLProtocol()
 
         for key, value in UNSAFE_KEY_VALUES:
             self.assertRaises(RepresenterError, safe_p.write, key, value)
 
     def test_value_protocol_wont_encode(self):
-        safe_p = YAMLValueProtocol(safe=True)
+        safe_p = SafeYAMLValueProtocol()
 
         for key, value in UNSAFE_VALUE_TUPLES:
             self.assertRaises(RepresenterError, safe_p.write, key, value)
 
     def test_protocol_wont_decode(self):
         p = YAMLProtocol()
-        safe_p = YAMLProtocol(safe=True)
+        safe_p = SafeYAMLProtocol()
 
         for key, value in UNSAFE_KEY_VALUES:
             encoded = p.write(key, value)
@@ -131,7 +133,7 @@ class SafetyTestCase(unittest.TestCase):
 
     def test_value_protocol_wont_decode(self):
         p = YAMLValueProtocol()
-        safe_p = YAMLValueProtocol(safe=True)
+        safe_p = SafeYAMLValueProtocol()
 
         for key, value in UNSAFE_VALUE_TUPLES:
             encoded = p.write(key, value)
@@ -139,14 +141,14 @@ class SafetyTestCase(unittest.TestCase):
 
     def test_tuples_become_lists(self):
         p = YAMLProtocol()
-        safe_p = YAMLProtocol(safe=True)
+        safe_p = SafeYAMLProtocol()
 
         self.assertEqual(p.read(safe_p.write((), ())), ([], []))
         self.assertRaises(
             ConstructorError, safe_p.read, p.write((), ()))
 
 
-class InstrumentedYAMLProtocol(YAMLProtocol):
+class InstrumentedYAMLProtocol(SafeYAMLProtocol):
 
     def load(self, data):
         if not hasattr(self, '_data_loaded'):
