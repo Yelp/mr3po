@@ -159,13 +159,15 @@ class CachingTestCase(unittest.TestCase):
 
         self.assertEqual(p.read('[a, 1]\t2'), (['a', 1], 2))
         self.assertEqual(p.read('[a, 1]\t3'), (['a', 1], 3))
-        self.assertEqual(p.read('[b, 2]\t1'), (['b', 2], 1))
+        self.assertEqual(p.read('[b, 2]\t3'), (['b', 2], 3))
         self.assertEqual(p.read('[a, 1]\t3'), (['a', 1], 3))
 
-        # [a, 1] isn't decoded the second time because it's in the cache
         self.assertEqual(
             p.load.call_args_list,
             [call('[a, 1]'), call('2'),
+             # '[a, 1]' isn't decoded again because it's in the cache
              call('3'),
-             call('[b, 2]'), call('1'),
+             # '3' is decoded repeatedly because we don't cache values
+             call('[b, 2]'), call('3'),
+             # '[a, 1]' is re-decoded because the cache only holds one key
              call('[a, 1]'), call('3')])
