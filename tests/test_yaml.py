@@ -19,6 +19,8 @@ try:
 except ImportError:
     import unittest
 
+from mock import call
+from mock import Mock
 from yaml.constructor import ConstructorError
 from yaml.representer import RepresenterError
 
@@ -148,21 +150,12 @@ class SafetyTestCase(unittest.TestCase):
             ConstructorError, safe_p.read, p.write((), ()))
 
 
-class InstrumentedYAMLProtocol(SafeYAMLProtocol):
-
-    def load(self, data):
-        if not hasattr(self, '_data_loaded'):
-            self._data_loaded = []
-
-        self._data_loaded.append(data)
-
-        return super(InstrumentedYAMLProtocol, self).load(data)
-
-
 class CachingTestCase(unittest.TestCase):
 
     def test_caching(self):
-        p = InstrumentedYAMLProtocol()
+        p = YAMLProtocol()
+        # wrap load() with a mock so we can track calls to it
+        p.load = Mock(wraps=p.load)
 
         self.assertEqual(p.read('[a, 1]\t2'), (['a', 1], 2))
         self.assertEqual(p.read('[a, 1]\t3'), (['a', 1], 3))
@@ -171,5 +164,8 @@ class CachingTestCase(unittest.TestCase):
 
         # [a, 1] isn't decoded the second time because it's in the cache
         self.assertEqual(
-            p._data_loaded,
-            ['[a, 1]', '2', '3', '[b, 2]', '1', '[a, 1]', '3'])
+            p.load.call_args_list,
+            [call('[a, 1]'), call('2'),
+             call('3'),
+             call('[b, 2]'), call('1'),
+             call('[a, 1]'), call('3')])

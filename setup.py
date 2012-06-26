@@ -9,7 +9,7 @@ try:
         },
         provides=['mr3po'],
         test_suite='tests.suite.load_tests',
-        tests_require=['unittest2'],
+        tests_require=['mock', 'unittest2'],
     )
 except ImportError:
     from distutils.core import setup
