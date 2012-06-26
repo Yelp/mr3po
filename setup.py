@@ -5,12 +5,11 @@ try:
     setuptools_kwargs = dict(
         extras_require={
             # add dependecies for mr3po modules here
-            #
-            #'quipu': ['python-inca', 'knottedcord>=0.3']
+            'yaml': ['PyYAML'],
         },
         provides=['mr3po'],
         test_suite='tests.suite.load_tests',
-        tests_require=['unittest2'],
+        tests_require=['mock', 'unittest2'],
     )
 except ImportError:
     from distutils.core import setup
