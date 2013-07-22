@@ -99,7 +99,7 @@ class BadInputTestCase(unittest.TestCase):
             p.read, "INSERT INTO `user` VALUES (1,'David Marin'")
 
     def test_rows_and_cols_dont_match(self):
-        p = MySQLExtendedInsertProtocol()
+        p = MySQLCompleteInsertProtocol()
         # this is a problem even if the protocol doesn't care about
         # column names
         self.assertRaises(
@@ -109,7 +109,7 @@ class BadInputTestCase(unittest.TestCase):
             " (1,'David Marin',25.25,0xC0DE,NULL);")
 
     def test_differing_row_sizes(self):
-        p = MySQLExtendedInsertProtocol()
+        p = MySQLCompleteInsertProtocol()
         self.assertRaises(
             ValueError,
             p.read,

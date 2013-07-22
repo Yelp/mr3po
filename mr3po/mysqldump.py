@@ -41,6 +41,8 @@ INSERT_RE = re.compile(r'(`(?P<identifier>.*?)`|'
                        r'(?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?)|'
                        r'(?P<close_paren>\)))')
 
+COLUMNS_RE = re.compile(' \(`.*?`\) VALUES ')
+
 STRING_ESCAPE_RE = re.compile(r'\\(.)')
 
 # from http://dev.mysql.com/doc/refman/5.5/en/string-syntax.html
@@ -116,14 +118,17 @@ class MySQLExtendedInsertProtocol(AbstractMySQLInsertProtocol):
     complete = False
     single_row = False
 
-
 def parse_insert(sql, complete=False, decimal=False, encoding=None,
                  single_row=False):
-
     sql = decode_string(sql, encoding)
 
     if not sql.startswith('INSERT'):
         raise ValueError('not an INSERT statement')
+
+    if not complete:
+        # When returning a field list, matching the column names is not
+        # necessary.
+        sql = COLUMNS_RE.sub(' ', sql)
 
     identifiers = []
     rows = []
@@ -154,28 +159,27 @@ def parse_insert(sql, complete=False, decimal=False, encoding=None,
     if not rows:
         raise ValueError('bad INSERT, no values')
 
-    row_len = len(rows[0])
-    for i, row in enumerate(rows[1:]):
-        if len(row) != row_len:
-            raise ValueError(
-                'bad INSERT, row 0 has %d values, but row %d has %d values' %
-                (row_len, i + 1, len(row)))
-
-    if not identifiers:
-        raise ValueError('bad INSERT, no identifiers')
-
     table, cols = identifiers[0], identifiers[1:]
 
-    if cols and len(cols) != row_len:
-        raise ValueError(
-            'bad INSERT, %d column names but rows have %d values' %
-            (len(cols), row_len))
+    if not table:
+        raise ValueError('bad INSERT, no table name')
 
     if complete:
-        if cols:
-            results = [dict(zip(cols, row)) for row in rows]
-        else:
-            raise ValueError('incomplete INSERT, no column names')
+        row_len = len(rows[0])
+        if not cols:
+            raise ValueError('bad INSERT, no column names')
+        elif len(cols) != row_len:
+            raise ValueError(
+                'bad INSERT, %d column names but rows have %d values' %
+                (len(cols), row_len))
+        results = []
+        for i, row in enumerate(rows):
+            if len(row) != row_len:
+                raise ValueError(
+                    'bad INSERT, row 0 has %d values, but row %d has %d values' %
+                    (row_len, i + 1, len(row)))
+            else:
+                results.append(dict(zip(cols, row)))
     else:
         results = rows
 
