@@ -35,11 +35,11 @@ class GoodInputReadTestCase(unittest.TestCase):
     def test_insert(self):
         p = MySQLInsertProtocol()
         key, value = p.read(
-            "INSERT INTO `user` VALUES"
-            " (1,'David Marin',25.25,0xC0DE,NULL);")
+            r"INSERT INTO `user` VALUES"
+            r" (1,'David\nMarin',25.25,0xC0DE,NULL);")
         self.assertEqual(
             (key, value),
-            (u'user', [1, u'David Marin', 25.25, '\xc0\xde', None]))
+            (u'user', [1, u'David\nMarin', 25.25, '\xc0\xde', None]))
 
     def test_complete_insert(self):
         p = MySQLCompleteInsertProtocol()
