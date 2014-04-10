@@ -34,12 +34,15 @@ __all__ = [
 # Used http://dev.mysql.com/doc/refman/5.5/en/language-structure.html
 # as my guide for parsing INSERT statements
 
-INSERT_RE = re.compile(r'(`(?P<identifier>.*?)`|'
-                       r'(?P<null>NULL)|'
-                       r"'(?P<string>(?:\\.|''|[^'])*?)'|"
-                       r'0x(?P<hex>[0-9a0-f]+)|'
-                       r'(?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?)|'
-                       r'(?P<close_paren>\)))')
+INSERT_RE = re.compile(
+    r"""(`(?P<identifier>.*?)`| # Table or column names
+        (?P<null>NULL)|
+        '(?P<string>(?:\\.|''|[^'])*?)'|
+        0x(?P<hex>[0-9a0-f]+)|
+        (?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?)|
+        (?P<close_paren>\)))""",
+    re.VERBOSE,
+)
 
 STRING_ESCAPE_RE = re.compile(r'\\(.)')
 
