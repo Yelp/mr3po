@@ -86,9 +86,9 @@ class AbstractMySQLInsertProtocol(object):
             encoding=self.encoding,
             single_row=self.single_row)
 
-    def write(self, key, value):
+    def write(self, table, data):
         return dump_as_insert(
-            key, value,
+            table, data,
             complete=self.complete,
             encoding=self.encoding,
             output_tab=self.output_tab,
