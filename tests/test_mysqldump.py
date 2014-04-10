@@ -97,7 +97,22 @@ class BadInputTestCase(unittest.TestCase):
         p = MySQLExtendedInsertProtocol()
         self.assertRaises(
             ValueError,
-            p.read, "INSERT INTO `user` VALUES (1,'David Marin'")
+            p.read,
+            "INSERT INTO `user` VALUES (1,'David Marin'")
+
+    def test_no_values(self):
+        p = MySQLExtendedInsertProtocol()
+        self.assertRaises(
+            ValueError,
+            p.read,
+            "INSERT INTO `user` VALUES ();")
+
+    def test_no_identifiers(self):
+        p = MySQLExtendedInsertProtocol()
+        self.assertRaises(
+            ValueError,
+            p.read,
+            "INSERT INTO  VALUES (1, 2, 3);")
 
     def test_rows_and_cols_dont_match(self):
         p = MySQLExtendedInsertProtocol()
@@ -116,6 +131,23 @@ class BadInputTestCase(unittest.TestCase):
             p.read,
             "INSERT INTO `user` VALUES"
             " (1,'David Marin',25.25,0xC0DE,NULL), (2);")
+
+    def test_complete_no_column_names(self):
+        p = MySQLCompleteInsertProtocol()
+        self.assertRaises(
+            ValueError,
+            p.read,
+            "INSERT INTO `user` VALUES"
+            " (1,'David Marin',25.25,0xC0DE,NULL);")
+
+    def test_unexpected_multiple_rows(self):
+        p = MySQLInsertProtocol()
+        self.assertRaises(
+            ValueError,
+            p.read,
+            "INSERT INTO `user` VALUES"
+            " (1,'David Marin',25.25,0xC0DE,NULL),"
+            " (2,'Benoit Thiell',26.27,0xC0DE,NULL);")
 
 
 class EncodingTestCase(unittest.TestCase):
