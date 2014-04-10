@@ -289,15 +289,15 @@ class MySQLExtendedCompleteInsertProtocolRoundTripTestCase(RoundTripTestCase):
 
 class NotImplementedExceptions(unittest.TestCase):
 
-    ABSTRACT_PROTOCOL = AbstractMySQLInsertProtocol()
-
     def test_complete(self):
+        p = AbstractMySQLInsertProtocol()
         with self.assertRaises(NotImplementedError):
-            self.ABSTRACT_PROTOCOL.complete()
+            p.complete()
 
     def test_single_row(self):
+        p = AbstractMySQLInsertProtocol()
         with self.assertRaises(NotImplementedError):
-            self.ABSTRACT_PROTOCOL.single_row()
+            p.single_row()
 
 
 if __name__ == '__main__':
