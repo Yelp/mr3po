@@ -30,7 +30,7 @@ from mr3po.mysqldump import MySQLInsertProtocol
 from tests.roundtrip import RoundTripTestCase
 
 
-class GoodInputTestCase(unittest.TestCase):
+class GoodInputReadTestCase(unittest.TestCase):
 
     def test_insert(self):
         p = MySQLInsertProtocol()
@@ -83,7 +83,7 @@ class GoodInputTestCase(unittest.TestCase):
                                       u'misc': None}]))
 
 
-class BadInputTestCase(unittest.TestCase):
+class BadInputReadTestCase(unittest.TestCase):
 
     def test_empty(self):
         p = MySQLExtendedInsertProtocol()
@@ -148,6 +148,45 @@ class BadInputTestCase(unittest.TestCase):
             "INSERT INTO `user` VALUES"
             " (1,'David Marin',25.25,0xC0DE,NULL),"
             " (2,'Benoit Thiell',26.27,0xC0DE,NULL);")
+
+
+class BadInputWriteTestCase(unittest.TestCase):
+
+    def test_empty_data(self):
+        p = MySQLInsertProtocol()
+        self.assertRaises(
+            ValueError,
+            p.write,
+            'user',
+            []
+        )
+
+    def test_unsupported_value_format(self):
+        p = MySQLInsertProtocol()
+        self.assertRaises(
+            TypeError,
+            p.write,
+            'user',
+            (1, 'David Marin', {'a': 'dictionary'})
+        )
+
+    def test_single_row_different_row_sizes(self):
+        p = MySQLExtendedInsertProtocol()
+        self.assertRaises(
+            ValueError,
+            p.write,
+            'user',
+            [(1,), (2, 'Benoit Thiell')]
+        )
+
+    def test_complete_different_row_sizes(self):
+        p = MySQLExtendedCompleteInsertProtocol()
+        self.assertRaises(
+            ValueError,
+            p.write,
+            'user',
+            [{'id': 1}, {'id': 2, 'name': 'Benoit Thiell'}]
+        )
 
 
 class EncodingTestCase(unittest.TestCase):
