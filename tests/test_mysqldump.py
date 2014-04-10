@@ -21,6 +21,7 @@ try:
 except ImportError:
     import unittest
 
+from mr3po.mysqldump import AbstractMySQLInsertProtocol
 from mr3po.mysqldump import MySQLExtendedCompleteInsertProtocol
 from mr3po.mysqldump import MySQLCompleteInsertProtocol
 from mr3po.mysqldump import MySQLExtendedInsertProtocol
@@ -284,3 +285,20 @@ class MySQLExtendedCompleteInsertProtocolRoundTripTestCase(RoundTripTestCase):
                    'misc': None},
                   ]),
     ]
+
+
+class NotImplementedExceptions(unittest.TestCase):
+
+    ABSTRACT_PROTOCOL = AbstractMySQLInsertProtocol()
+
+    def test_complete(self):
+        with self.assertRaises(NotImplementedError):
+            self.ABSTRACT_PROTOCOL.complete()
+
+    def test_single_row(self):
+        with self.assertRaises(NotImplementedError):
+            self.ABSTRACT_PROTOCOL.single_row()
+
+
+if __name__ == '__main__':
+    unittest.main()
