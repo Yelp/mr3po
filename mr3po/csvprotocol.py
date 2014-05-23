@@ -11,9 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Represent data in csv format. 
+"""Read and write values in csv format. 
+
 Primarily useful for reading from raw input files. 
 Can also output csv if that is your kind of thing.
+
 Definitely NOT recommended for use as an internal protocol. 
 """
 
@@ -37,7 +39,7 @@ class CsvProtocol(object):
         for r in l:
             data = [decode_string(f).strip() for f in r]
             break
-        return (None, data)  # list of values
+        return (None, data)
 
     def write(self, _, data):
         """Output a list of values as a comma-separated string

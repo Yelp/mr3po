@@ -55,13 +55,11 @@ class CsvProtocolTestCase(unittest.TestCase):
 
     def test_format_strings(self):
         p = CsvProtocol()
-        s1 = 'Benoit Mandelbrot'
-        s2 = u'Paul Erdős'
-        n1 = 101
-        n2 = 2.718281
-        self.assertEqual(p.fmt(s1), u'"Benoit Mandelbrot"')
-        self.assertEqual(p.fmt(s2), u'"Paul Erdős"')
-        self.assertEqual(p.fmt(n1), u'101')
-        self.assertEqual(p.fmt(n2), u'2.718281')
+        io = [('Benoit Mandelbrot', u'"Benoit Mandelbrot"'),
+                (u'Paul Erdős', u'"Paul Erdős"'),
+                (101, u'101'),
+                (2.718281, u'2.718281')]
+        for t in io:
+            self.assertEqual(p.fmt(t[0]),t[1]) 
 
 
