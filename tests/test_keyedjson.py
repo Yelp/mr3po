@@ -22,6 +22,15 @@ except ImportError:
 from mr3po.keyedjson import KeyedJsonProtocol
 from tests.roundtrip import RoundTripTestCase
 
+class KeyedJsonProtocolRoundTripTestCase(RoundTripTestCase):
+    PROTOCOLS = [
+            KeyedJsonProtocol()
+            ]
+    ROUND_TRIP_KEY_VALUES = [
+            ("foo",{'foo':123,'bar':456}),
+            ("123", [1,2,3,4,5]),
+            ]
+
 class KeyedJsonProtocolTestCase(unittest.TestCase):
 
     def test_read_line_dict(self):
