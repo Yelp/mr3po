@@ -19,6 +19,7 @@ created when using :command:s3mysqldump with the :option:`--single-row`
 option). There are also protocols to handle rows without column names and
 multi-row ``INSERT`` statements.
 """
+import itertools
 from decimal import Decimal
 import re
 
@@ -34,9 +35,12 @@ __all__ = [
 # Used http://dev.mysql.com/doc/refman/5.5/en/language-structure.html
 # as my guide for parsing INSERT statements
 
-INSERT_RE = re.compile(r'(`(?P<identifier>.*?)`|'
-                       r'(?P<null>NULL)|'
-                       r"'(?P<string>(?:\\.|''|[^'])*?)'|"
+IDENTIFIER_RE = re.compile(
+    r'`(?P<identifier>.*?)`'
+)
+
+INSERT_RE = re.compile(r'((?P<null>NULL)|'
+                       r"'(?P<string>(?:\\.|''|[^'\\]+)*?)'|"
                        r'0x(?P<hex>[0-9a0-f]+)|'
                        r'(?P<number>[+-]?\d+\.?\d*(?:e[+-]?\d+)?)|'
                        r'(?P<close_paren>\)))')
@@ -117,6 +121,92 @@ class MySQLExtendedInsertProtocol(AbstractMySQLInsertProtocol):
     single_row = False
 
 
+# NOTE: Follow "dot free" methodology, cf.
+# https://wiki.python.org/moin/PythonSpeed/PerformanceTips
+_group = next(INSERT_RE.finditer(u"'hi'")).__class__.group
+
+
+def parse_value(m, decimal):
+    if _group(m, 'null'):
+        return None
+
+    str_value = _group(m, 'string')
+    if str_value is not None:  # parse empty strings!
+        return unescape_string(str_value)
+
+    number_value = _group(m, 'number')
+    if number_value:
+        return parse_number(number_value, decimal=decimal)
+
+    hex_value = _group(m, 'hex')
+    if hex_value:
+        return hex_value.decode('hex')
+
+    raise ValueError("Bad match {0!r}".format(m.groupdict()))
+
+
+def parse_values_sql(values_sql, decimal):
+    current_row = []
+    for m in INSERT_RE.finditer(values_sql):
+        if _group(m, 'close_paren') is not None:
+            yield current_row
+            current_row = []
+        else:
+            current_row.append(parse_value(m, decimal))
+    assert not current_row
+
+
+_table_name_and_columns_cache = {}
+def parse_table_name_and_cols(identifiers_sql):
+    try:
+        return _table_name_and_columns_cache[identifiers_sql]
+    except KeyError:
+        # Clear the cache occasionally
+        if len(_table_name_and_columns_cache) > 100:
+            _table_name_and_columns_cache.clear()
+
+        # The actual regex search
+        identifiers = tuple(
+            _group(m, 'identifier')
+            for m in IDENTIFIER_RE.finditer(identifiers_sql)
+        )
+
+        # Do some checks here, no need to do them for cached values
+        if not identifiers:
+            raise ValueError('bad INSERT, no identifiers')
+        elif len(identifiers) <= 1:
+            raise ValueError("bad INSERT, couldn't find columns")
+
+        # split to table name and columns
+        table_name, columns = identifiers[0], identifiers[1:]
+        _table_name_and_columns_cache[identifiers_sql] = table_name, columns
+        return table_name, columns
+
+
+def make_row_dict(cols, row):
+    if len(row) != len(cols):
+        raise ValueError(
+            "Wrong number of columns ({0}) in row, expected {1}"
+            .format(len(row), len(cols))
+        )
+    return dict(zip(cols, row))
+
+
+def do_all_parsing(sql, decimal, complete):
+    name_and_cols_sql, values_sql = sql.split(" VALUES ", 1)
+
+    table_name, cols = parse_table_name_and_cols(name_and_cols_sql)
+    results = [
+        (make_row_dict(cols, row) if complete else row)
+        for row in parse_values_sql(values_sql, decimal)
+    ]
+
+    if not results:
+        raise ValueError('bad INSERT, no values')
+
+    return table_name, results
+
+
 def parse_insert(sql, complete=False, decimal=False, encoding=None,
                  single_row=False):
 
@@ -125,68 +215,12 @@ def parse_insert(sql, complete=False, decimal=False, encoding=None,
     if not sql.startswith('INSERT'):
         raise ValueError('not an INSERT statement')
 
-    identifiers = []
-    rows = []
-    current_row = []
-    for m in INSERT_RE.finditer(sql):
-        if m.group('identifier'):
-            identifiers.append(m.group('identifier'))
-        elif m.group('null'):
-            current_row.append(None)
-        elif m.group('string') is not None:  # parse empty strings!
-            current_row.append(unescape_string(m.group('string')))
-        elif m.group('hex'):
-            current_row.append(m.group('hex').decode('hex'))
-        elif m.group('number'):
-            current_row.append(
-                parse_number(m.group('number'), decimal=decimal))
-        elif m.group('close_paren'):
-            # woot, I'm a parser
-            if current_row:
-                rows.append(current_row)
-                current_row = []
-        else:
-            assert False, 'should not be reached!'
-
-    if current_row:
-        raise ValueError('bad INSERT, missing close paren')
-
-    if not rows:
-        raise ValueError('bad INSERT, no values')
-
-    row_len = len(rows[0])
-    for i, row in enumerate(rows[1:]):
-        if len(row) != row_len:
-            raise ValueError(
-                'bad INSERT, row 0 has %d values, but row %d has %d values' %
-                (row_len, i + 1, len(row)))
-
-    if not identifiers:
-        raise ValueError('bad INSERT, no identifiers')
-
-    table, cols = identifiers[0], identifiers[1:]
-
-    if cols and len(cols) != row_len:
-        raise ValueError(
-            'bad INSERT, %d column names but rows have %d values' %
-            (len(cols), row_len))
-
-    if complete:
-        if cols:
-            results = [dict(zip(cols, row)) for row in rows]
-        else:
-            raise ValueError('incomplete INSERT, no column names')
-    else:
-        results = rows
-
-    if single_row:
-        if len(results) == 1:
-            return table, results[0]
-        else:
-            raise ValueError(
-                'bad INSERT, expected 1 row but got %d' % len(results))
-    else:
-        return table, results
+    table, results = do_all_parsing(sql, decimal=decimal, complete=complete)
+    return (
+        (table, results[0])
+        if single_row
+        else (table, results)
+    )
 
 
 def dump_as_insert(table, data, complete=False, encoding=None,
