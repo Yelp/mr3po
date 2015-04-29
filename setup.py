@@ -1,3 +1,5 @@
+import os
+
 try:
     from setuptools import setup
     setup  # quiet "redefinition of unused ..." warning from pyflakes
