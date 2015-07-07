@@ -24,10 +24,10 @@ from mock import Mock
 from yaml.constructor import ConstructorError
 from yaml.representer import RepresenterError
 
-from mr3po.yaml import SafeYAMLProtocol
-from mr3po.yaml import SafeYAMLValueProtocol
-from mr3po.yaml import YAMLProtocol
-from mr3po.yaml import YAMLValueProtocol
+from mr3px.yaml import SafeYAMLProtocol
+from mr3px.yaml import SafeYAMLValueProtocol
+from mr3px.yaml import YAMLProtocol
+from mr3px.yaml import YAMLValueProtocol
 from tests.roundtrip import RoundTripTestCase
 
 
