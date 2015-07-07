@@ -16,7 +16,7 @@
 __author__ = 'David Marin <dave@yelp.com>'
 
 __credits__ = [
-    # You?
+    'Max Sharples <maxsharples@gmail.com>'
 ]
 
-__version__ = '0.2.0-dev'
+__version__ = '0.4.0'

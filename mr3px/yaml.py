@@ -29,7 +29,7 @@ from __future__ import absolute_import
 
 import yaml
 
-from mr3po.common import decode_string
+from mr3px.common import decode_string
 
 
 __all__ = [
