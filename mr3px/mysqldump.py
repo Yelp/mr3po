@@ -22,7 +22,7 @@ multi-row ``INSERT`` statements.
 from decimal import Decimal
 import re
 
-from mr3po.common import decode_string
+from mr3px.common import decode_string
 
 __all__ = [
     'MySQLExtendedCompleteInsertProtocol',

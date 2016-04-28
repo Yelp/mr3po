@@ -21,10 +21,10 @@ try:
 except ImportError:
     import unittest
 
-from mr3po.mysqldump import MySQLExtendedCompleteInsertProtocol
-from mr3po.mysqldump import MySQLCompleteInsertProtocol
-from mr3po.mysqldump import MySQLExtendedInsertProtocol
-from mr3po.mysqldump import MySQLInsertProtocol
+from mr3px.mysqldump import MySQLExtendedCompleteInsertProtocol
+from mr3px.mysqldump import MySQLCompleteInsertProtocol
+from mr3px.mysqldump import MySQLExtendedInsertProtocol
+from mr3px.mysqldump import MySQLInsertProtocol
 
 from tests.roundtrip import RoundTripTestCase
 
