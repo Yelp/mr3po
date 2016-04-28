@@ -36,7 +36,6 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.5',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Database',
@@ -48,7 +47,7 @@ setup(
                              'README.md'))),
     name='mr3px',
     packages=['mr3px'],
-    url='http://github.com/msharp/mr3po',
+    url='http://github.com/msharp/mr3px',
     version=mr3px.__version__,
     **setuptools_kwargs
 )

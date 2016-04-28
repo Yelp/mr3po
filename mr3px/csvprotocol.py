@@ -26,15 +26,20 @@ from common import decode_string
 
 class CsvProtocol(object):
 
-    QUOTE_CHAR = '"'
     QUOTABLE_TYPES = [types.StringType,types.StringTypes,types.UnicodeType]
 
+    def __init__(self, delimiter=',', quotechar='"'):
+        self.delimiter = delimiter
+        self.quotechar = quotechar
+
     def read(self, line):
-        """read a line of csv data and output a list of values
+        """
+        read a line of csv data and output a list of values
         converts to unicode using common.decode_string
         """
         l = csv.reader(StringIO.StringIO(line), 
-                quotechar=self.QUOTE_CHAR, 
+                delimiter=self.delimiter,
+                quotechar=self.quotechar, 
                 skipinitialspace=True)
         for r in l:
             data = [decode_string(f).strip() for f in r]
@@ -42,20 +47,27 @@ class CsvProtocol(object):
         return (None, data)
 
     def write(self, _, data):
-        """Output a list of values as a comma-separated string
+        """
+        Output a list of values as a comma-separated string
         """
         out = [self.fmt(d) for d in data]
         return ",".join(out)
 
     def fmt(self,val):
-        """Format the values for common CSV output 
+        """
+        Format the values for common CSV output 
         """
         if type(val) in self.QUOTABLE_TYPES:
             s = decode_string(val)
-            return u"{0}{1}{2}".format(self.QUOTE_CHAR, s, self.QUOTE_CHAR)
+            return u"{0}{1}{2}".format(self.quotechar, s, self.quotechar)
         else:
             return decode_string(str(val))
 
+
 class CsvSingleQuotedProtocol(CsvProtocol):
-    QUOTE_CHAR = "'"
+    # retaining this for backwards-compatability
+    def __init__(self, delimiter=','):
+        self.delimiter = delimiter
+        self.quotechar = "'"
+    
 

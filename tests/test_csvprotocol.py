@@ -18,8 +18,7 @@ try:
 except ImportError:
     import unittest
 
-from mr3px.csvprotocol import CsvProtocol
-from mr3px.csvprotocol import CsvSingleQuotedProtocol
+from mr3px.csvprotocol import CsvProtocol, CsvSingleQuotedProtocol
 
 
 class CsvProtocolTestCase(unittest.TestCase):
@@ -37,10 +36,12 @@ class CsvProtocolTestCase(unittest.TestCase):
         self.assertEqual(p.read(line), (None, res))
 
     def test_alternate_quotes(self):
-        p = CsvSingleQuotedProtocol()
+        p1 = CsvSingleQuotedProtocol() # old style
+        p2 = CsvProtocol(quotechar="'") # new style
         line = "'foo',  'bar',  'baz',  1,  2,  3.333"
         res = [u'foo', u'bar', u'baz', u'1', u'2', u'3.333']
-        self.assertEqual(p.read(line), (None, res))
+        self.assertEqual(p1.read(line), (None, res))
+        self.assertEqual(p2.read(line), (None, res))
     
     def test_read_unicode(self):
         p = CsvProtocol()
@@ -69,4 +70,9 @@ class CsvProtocolTestCase(unittest.TestCase):
         for t in io:
             self.assertEqual(p.fmt(t[0]), t[1]) 
 
+    def test_alternate_delimiter(self):
+        p = CsvProtocol(delimiter='|')
+        line = "foo|bar|baz|1|2|3.333\n"
+        res = [u'foo', u'bar', u'baz', u'1', u'2', u'3.333']
+        self.assertEqual(p.read(line), (None, res))
 
